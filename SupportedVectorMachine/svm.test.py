@@ -1,6 +1,7 @@
-from sklearn.svm import SVC
-import SVM
 import numpy as np
+from sklearn.svm import SVC
+
+from SupportedVectorMachine import SVM
 
 DIM = 2
 COLORS = ['red', 'blue']
