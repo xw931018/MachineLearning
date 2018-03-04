@@ -1,64 +1,152 @@
-import numpy as np
-from sklearn.svm import SVC
-
-from SupportedVectorMachine import SVM
-
-DIM = 2
-COLORS = ['red', 'blue']
-
-M1 = np.ones((DIM,))
-
-M2 = 2 * np.ones((DIM,))
-
-V1 = np.diag(0.4 * np.ones((DIM,)))
-
-V2 = np.diag(0.4 * np.ones((DIM,)))
-
-NUM = 100
-if __name__ == "__main__":
-    X1 = SVM.gaussian_generator(M1, V1, NUM)
-    y1 = np.ones((X1.shape[0],))
-    X2 = SVM.gaussian_generator(M2, V2, NUM)
-    y2 = -np.ones((X2.shape[0],))
-    x = np.concatenate((X1, X2))
-    y = np.concatenate((y1, y2))
-
-    SVM.plot_data_with_labels(x, y, COLORS)
+import collections
+import math
 
 
-svc = SVC(kernel = "linear", C = 10)
-svc.fit(x, y)
+# Utils: tools to calculate entropies
+class Utils:
+    def __init__(self, data, labels, base=2):
+        self._data = data
+        self._counters = collections.Counter(labels)
+        self._labels = labels
+        self._base = base
 
-svm_lin = SVM.SVM_Linear(x, y, 10)
-alphas = svm_lin.dual_fit()
-(w, b) = svm_lin.fit()
+    def entropy(self, labels=None, eps=1e-12):
+        _len = len(self._labels)
+        if labels is None:
+            labels = [val for val in self._counters.values()]
+        return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in labels])])
 
-svm_lin.plot_2d()
+    def cond_entropy(self, idx):
+        data = self._data[idx]
+        values = set(data)
+        result = 0
+        for val in values:
+            index = data == val
+            labels = self._labels[index]
+            result += Utils(data[index], labels).entropy() * len(labels) / len(data)
+        return result
 
-print(svm_lin.w, svc.coef_)
-print(svm_lin.b, svc.intercept_)
+    def info_gain(self, idx):
+        _cond_ent = self.cond_entropy(idx)
+        _gain = self.entropy() - _cond_ent
+        return _gain, _cond_ent
 
-def RBF(x, y):
-    return np.exp(-2*(x - y).dot(x-y))
+    def feature_entropy(self, idx, eps=1e-12):
+        _feat_values = self._data[idx]
+        _len = len(_feat_values)
+        _feat_labels = Counter(_feat_values).values()
+        return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in _feat_labels])])
 
-svm_kernel = SVM.SVM_Linear(x, y, 10, kernel = RBF)
-alphas_kernel = svm_kernel.dual_fit()
-svm_kernel.fit()
+    def info_gain_rate(self, idx):
+        _feat_ent = self.feature_entropy(idx)
+        return self.info_gain(idx)[0] / _feat_ent
 
-svm_kernel.plot_2d()
 
-from sklearn.datasets import make_moons
+# Node object: main class to realize a classification decision tree
+class Node:
+    def __init__(self, data, labels, tree=None, base=2, max_depth=None,
+                 depth=0, parent=None, is_root=True, feat_value=None,
+                 node_type="ID3"):
+        self._data = data
+        self._labels = labels
+        self._features = data.columns
+        self._base = base
+        self._utils = Utils(self._data, self._labels, self._base)
+        self._max_depth = max_depth
+        self._depth = depth
+        self.entropy = self._utils.entropy()
+        self.is_root = is_root
+        self.parent = parent
+        self.leafs = {}
+        self.children = {}
+        self.feat_value = feat_value  # to record the value of split feature
+        self.node_type = node_type
+        self.best_split_feature(node_type)
+        self.class_result = None  # save the node class if the node is a leaf
+        self.tree = tree
+        if self.tree is not None:
+            tree.nodes.append(self)  # add this node into the tree object
 
-X, y = make_moons(n_samples = 200, noise = 0.15, random_state = 1)
+    def best_split_feature(self, node_type="ID3"):
+        max_gain = - np.infty
+        feat = ""
+        for feature in self._features:
+            new_gain = self._utils.info_gain_rate(feature) if node_type == "C4.5" else self._utils.info_gain(feature)[0]
+            if max_gain < new_gain:
+                max_gain = new_gain
+                feat = feature
+        self._split_feature = feat
+        self._info_gain = max_gain
+        return feat, max_gain
 
-y = (y - 0.5)*2
+    def _generate_children(self, feat_name):
+        feat_values = self._data[feat_name]
+        _new_data = self._data.drop(feat_name, axis=1)
+        for feat in set(feat_values):
+            _idx = feat_values == feat
+            _new_node_data = _new_data[_idx]
+            _new_node_labels = self._labels[_idx]
+            _new_node = self.__class__(_new_node_data, _new_node_labels, tree=self.tree,
+                                       base=self._base, max_depth=self._max_depth, parent=self,
+                                       depth=self._depth + 1, is_root=False, feat_value=feat,
+                                       node_type=self.node_type)
+            self.children[feat] = _new_node
+            _new_node.fit()
 
-def polynomial(x, y):
-    return (x.dot(y) + 5)**5
+    def stop(self, eps=1e-8):
+        if (self._data.shape[1] == 0 or (self.entropy is not None and self.entropy <= eps)
+            or (self._max_depth is not None and self._depth >= self._max_depth)):
+            self.class_result = self.get_class()
+            # print("Leaf node at ", self._data.shape, self.entropy, set(self._labels))
+            return True
+        return False
 
-SVM.plot_data_with_labels(X, y)
+    def fit(self, eps=1e-8):
+        if self.stop(eps):
+            return
+        _max_feature = self._split_feature
+        self._generate_children(_max_feature)
 
-svm_kernel = SVM.SVM_Linear(X, y, C = 10, kernel = RBF)
+    def get_class(self):  # if the node is leaf, then return the classification result of this node
+        _counter = Counter(self._labels)
+        return max(_counter.keys(), key=lambda key: _counter[key])
 
-svm_kernel.fit(X, y)
-svm_kernel.plot_2d()
+    def view(self, indent=4):
+        if self.parent is not None:
+            if self.class_result is None:
+                print(' ' * indent * self._depth, self.parent._split_feature, self.feat_value)
+            else:
+                print(' ' * indent * self._depth, self.parent._split_feature, self.feat_value, "class: ",
+                      self.class_result)
+        else:
+            print(' ' * indent * self._depth, "Root")
+        for _node in self.children.values():
+            _node.view()
+
+    def predict_one_sample(self, x):
+        if self.class_result is not None:
+            return self.class_result
+        else:
+            try:
+                return self.children[x[self._split_feature][0]].predict_one_sample(x)
+            except KeyError:
+                return self.get_class()
+
+    def predict(self, data):
+        if self.class_result is not None:
+            if self.is_root:
+                return [self.class_result] * len(data)
+            return self.class_result
+        return [self.predict_one_sample(data.loc[i:i]) for i in range(len(data))]
+
+
+# Tree: this class is used for controlling globally nodes, thus for tree pruning
+class Tree:
+    def __init__(self, data, labels, max_depth=None):
+        self.nodes = []
+        self._max_depth = max_depth
+        self.root = Node(data, labels, tree=self, max_depth=max_depth)
+
+    def fit(self, eps=1e-8):
+        self.root.fit(eps)
+

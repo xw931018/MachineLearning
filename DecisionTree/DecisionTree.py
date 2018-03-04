@@ -2,6 +2,7 @@ import collections
 import math
 
 
+# Utils: tools to calculate entropies
 class Utils:
     def __init__(self, data, labels, base=2):
         self._data = data
@@ -41,7 +42,7 @@ class Utils:
         return self.info_gain(idx)[0] / _feat_ent
 
 
-# Node object
+# Node object: main class to realize a classification decision tree
 class Node:
     def __init__(self, data, labels, base=2, max_depth=None,
                  depth=0, parent=None, is_root=True, feat_value=None,
@@ -61,6 +62,7 @@ class Node:
         self.feat_value = feat_value
         self.node_type = node_type
         self.best_split_feature(node_type)
+        self.class_result = None  # save the node class if the node is a leaf
 
     def best_split_feature(self, node_type="ID3"):
         max_gain = - np.infty
@@ -91,6 +93,7 @@ class Node:
     def stop(self, eps=1e-8):
         if (self._data.shape[1] == 0 or (self.entropy is not None and self.entropy <= eps)
             or (self._max_depth is not None and self._depth >= self._max_depth)):
+            self.class_result = self.get_class()
             # print("Leaf node at ", self._data.shape, self.entropy, set(self._labels))
             return True
         return False
@@ -101,13 +104,37 @@ class Node:
         _max_feature = self._split_feature
         self._generate_children(_max_feature)
 
+    def get_class(self):  # if the node is leaf, then return the classification result of this node
+        _counter = Counter(self._labels)
+        return max(_counter.keys(), key=lambda key: _counter[key])
+
     def view(self, indent=4):
         if self.parent is not None:
-            print(' ' * indent * self._depth, self.parent._split_feature, self.feat_value)
+            if self.class_result is None:
+                print(' ' * indent * self._depth, self.parent._split_feature, self.feat_value)
+            else:
+                print(' ' * indent * self._depth, self.parent._split_feature, self.feat_value, "class: ",
+                      self.class_result)
         else:
             print(' ' * indent * self._depth, "Root")
         for _node in self.children.values():
             _node.view()
 
-# Tree
+    def predict_one_sample(self, x):
+        if self.class_result is not None:
+            return self.class_result
+        else:
+            try:
+                return self.children[x[self._split_feature][0]].predict_one_sample(x)
+            except KeyError:
+                return self.get_class()
+
+    def predict(self, data):
+        if self.class_result is not None:
+            if self.is_root:
+                return [self.class_result] * len(data)
+            return self.class_result
+        return [self.predict_one_sample(data.loc[i:i]) for i in range(len(data))]
+
+# Tree: this class is used only for tree pruning
 
