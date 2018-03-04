@@ -1,6 +1,6 @@
 import collections
 import math
-import numpy as np
+
 
 class Utils:
     def __init__(self, data, labels, base=2):
@@ -30,10 +30,22 @@ class Utils:
         _gain = self.entropy() - _cond_ent
         return _gain, _cond_ent
 
+    def feature_entropy(self, idx, eps=1e-12):
+        _feat_values = self._data[idx]
+        _len = len(_feat_values)
+        _feat_labels = Counter(_feat_values).values()
+        return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in _feat_labels])])
+
+    def info_gain_rate(self, idx):
+        _feat_ent = self.feature_entropy(idx)
+        return self.info_gain(idx)[0] / _feat_ent
+
 
 # Node object
 class Node:
-    def __init__(self, data, labels, base=2, max_depth=None, depth=0, parent=None, is_root=True, feat_value=None):
+    def __init__(self, data, labels, base=2, max_depth=None,
+                 depth=0, parent=None, is_root=True, feat_value=None,
+                 node_type="ID3"):
         self._data = data
         self._labels = labels
         self._features = data.columns
@@ -47,13 +59,14 @@ class Node:
         self.leafs = {}
         self.children = {}
         self.feat_value = feat_value
-        self.best_split_feature()
+        self.node_type = node_type
+        self.best_split_feature(node_type)
 
-    def best_split_feature(self):
+    def best_split_feature(self, node_type="ID3"):
         max_gain = - np.infty
         feat = ""
         for feature in self._features:
-            new_gain = self._utils.info_gain(feature)[0]
+            new_gain = self._utils.info_gain_rate(feature) if node_type == "C4.5" else self._utils.info_gain(feature)[0]
             if max_gain < new_gain:
                 max_gain = new_gain
                 feat = feature
@@ -70,7 +83,8 @@ class Node:
             _new_node_labels = self._labels[_idx]
             _new_node = self.__class__(_new_node_data, _new_node_labels,
                                        base=self._base, max_depth=self._max_depth, parent=self,
-                                       depth=self._depth + 1, is_root=False, feat_value=feat)
+                                       depth=self._depth + 1, is_root=False, feat_value=feat,
+                                       node_type=self.node_type)
             self.children[feat] = _new_node
             _new_node.fit()
 
@@ -94,3 +108,6 @@ class Node:
             print(' ' * indent * self._depth, "Root")
         for _node in self.children.values():
             _node.view()
+
+# Tree
+
