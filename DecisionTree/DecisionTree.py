@@ -106,7 +106,8 @@ class Node:
 
     def stop(self, eps=1e-8):
         if (self._data.shape[1] == 0 or (self.entropy is not None and self.entropy <= eps)
-            or (self._max_depth is not None and self._depth >= self._max_depth)):
+            or (self._max_depth is not None and self._depth >= self._max_depth)
+            or len(set(self._labels)) == 1):
             self.class_result = self.get_class()
             # print("Leaf node at ", self._data.shape, self.entropy, set(self._labels))
             _parent = self
@@ -160,9 +161,11 @@ class Node:
             self.class_result = self.get_class()
         _leafs_to_pop = [key for key in self.leafs.keys()]
         for key in _leafs_to_pop:
-            self._data = self._data.append(self.leafs[key]._data)
-            self._labels = self._labels.append(self.leafs[key]._labels)
+            if not key == self.key:
+                self._data = self._data.append(self.leafs[key]._data)
+                self._labels = self._labels.append(self.leafs[key]._labels)
         _parent = self
+        self._utils = Utils(self._data, self._labels, self._base)
         while _parent is not None:
             for key in _leafs_to_pop:
                 _parent.leafs.pop(key)
@@ -171,24 +174,27 @@ class Node:
         self.children = {}
         self.pruned = True
 
-    def entropy_if_pruned(self, eps=1e-12):
+    # Attention ! This is not the entropy we used to build nodes. It's the loss function to prune the tree !
+    def loss_if_pruned(self, eps=1e-12):
         _leafs_to_pop = [key for key in self.leafs.keys()]
         _data = self._data
         _labels = self._labels
         for key in _leafs_to_pop:
-            _labels = _labels.append(self.leafs[key]._labels)
+            if not key == self.key:
+                _labels = _labels.append(self.leafs[key]._labels)
         _label_counter = Counter(_labels)
         _labels_ent = [val for val in _label_counter.values()]
         _len = len(_labels)
-        return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in _labels_ent])])
+        return max([eps, - np.sum([p * math.log(p / _len, self._base) for p in _labels_ent])])
 
 
 # Tree: this class is used for controlling globally nodes, thus for tree pruning
 class Tree:
-    def __init__(self, data, labels, max_depth=None):
+    def __init__(self, data, labels, max_depth=None, node_type="ID3"):
         self.nodes = []
         self._max_depth = max_depth
-        self.root = Node(data, labels, tree=self, max_depth=max_depth)
+        self.node_type = node_type
+        self.root = Node(data, labels, tree=self, max_depth=max_depth, node_type=self.node_type)
 
     @property
     def depth(self):
@@ -203,16 +209,14 @@ class Tree:
     def predict(self, data):
         return self.root.predict(data)
 
-    def prune(self, alpha=1):
+    def prune(self, alpha=100):
         if self.depth <= 2:
             return
         _tmp_nodes = sorted(np.array([node for node in self.nodes if not node.is_root and not node.class_result]),
-                            key=lambda node: - node.layers)
-        print([node.layers for node in _tmp_nodes])
-        _old_loss = np.array([np.sum([leaf._utils.entropy() for leaf in node.leafs.values()]) * len(node.leafs)
+                            key=lambda node: node.layers)
+        _old_loss = np.array([np.sum([leaf._utils.entropy() * len(leaf._labels) for leaf in node.leafs.values()])
                               + alpha * len(node.leafs) for node in _tmp_nodes])
-        _new_loss = [node.entropy_if_pruned() + alpha for node in _tmp_nodes]
-        print(_old_loss, _new_loss)
+        _new_loss = [node.loss_if_pruned() + alpha for node in _tmp_nodes]
         _idx = (_old_loss - _new_loss) > 0
         arg = np.argmax(_idx)
         if _idx[arg]:
