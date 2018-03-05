@@ -1,6 +1,6 @@
 import collections
 import math
-
+import numpy as np
 
 # Utils: tools to calculate entropies
 class Utils:
