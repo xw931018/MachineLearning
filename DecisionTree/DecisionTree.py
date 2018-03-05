@@ -44,7 +44,7 @@ class Utils:
 
 # Node object: main class to realize a classification decision tree
 class Node:
-    def __init__(self, data, labels, base=2, max_depth=None,
+    def __init__(self, data, labels, tree=None, base=2, max_depth=None,
                  depth=0, parent=None, is_root=True, feat_value=None,
                  node_type="ID3"):
         self._data = data
@@ -59,10 +59,24 @@ class Node:
         self.parent = parent
         self.leafs = {}
         self.children = {}
-        self.feat_value = feat_value
+        self.feat_value = feat_value  # to record the value of split feature
         self.node_type = node_type
         self.best_split_feature(node_type)
         self.class_result = None  # save the node class if the node is a leaf
+        self.tree = tree
+        self.pruned = False
+        if self.tree is not None:
+            tree.nodes.append(self)  # add this node into the tree object
+
+    @property
+    def key(self):
+        return self._depth, self._split_feature, id(self)
+
+    @property
+    def layers(self):
+        if self.class_result is not None:
+            return 1
+        return 1 + max([_child.layers for _child in self.children.values()])
 
     def best_split_feature(self, node_type="ID3"):
         max_gain = - np.infty
@@ -83,7 +97,7 @@ class Node:
             _idx = feat_values == feat
             _new_node_data = _new_data[_idx]
             _new_node_labels = self._labels[_idx]
-            _new_node = self.__class__(_new_node_data, _new_node_labels,
+            _new_node = self.__class__(_new_node_data, _new_node_labels, tree=self.tree,
                                        base=self._base, max_depth=self._max_depth, parent=self,
                                        depth=self._depth + 1, is_root=False, feat_value=feat,
                                        node_type=self.node_type)
@@ -95,6 +109,10 @@ class Node:
             or (self._max_depth is not None and self._depth >= self._max_depth)):
             self.class_result = self.get_class()
             # print("Leaf node at ", self._data.shape, self.entropy, set(self._labels))
+            _parent = self
+            while _parent is not None:
+                _parent.leafs[self.key] = self
+                _parent = _parent.parent
             return True
         return False
 
@@ -136,5 +154,53 @@ class Node:
             return self.class_result
         return [self.predict_one_sample(data.loc[i:i]) for i in range(len(data))]
 
-# Tree: this class is used only for tree pruning
+    def prune_node(self):  # Prune this node: 1. give a category for this node; 2. delete all leafs of this node\
+        # 3. empty the children of this node
+        if self.class_result is None:
+            self.class_result = self.get_class()
+        _leafs_to_pop = [key for key in self.leafs.keys()]
+        _parent = self
+        while _parent is not None:
+            for key in _leafs_to_pop:
+                _parent.leafs.pop(key)
+            _parent.leafs[self.key] = self
+            _parent = _parent.parent
+        self.children = {}
+        self.pruned = True
 
+
+# Tree: this class is used for controlling globally nodes, thus for tree pruning
+class Tree:
+    def __init__(self, data, labels, max_depth=None):
+        self.nodes = []
+        self._max_depth = max_depth
+        self.root = Node(data, labels, tree=self, max_depth=max_depth)
+
+    @property
+    def depth(self):
+        return self.root.layers
+
+    def fit(self, eps=1e-8):
+        self.root.fit(eps)
+
+    def predict_one_sample(self, x):
+        return self.root.predict_one_sample(x)
+
+    def predict(self, data):
+        return self.root.predict(data)
+
+    def prune(self, alpha=1):
+        if self.depth <= 2:
+            return
+        _tmp_nodes = np.array([node for node in self.nodes if not node.is_root and not node.class_result])
+        _old_loss = np.array([np.sum([leaf._utils.entropy() for leaf in node.leafs.values()]) * len(node.leafs)
+                              + alpha * len(node.leafs) for node in _tmp_nodes])
+        _new_loss = [node.entropy + alpha for node in _tmp_nodes]
+        _idx = (_old_loss - _new_loss) > 0
+        arg = np.argmax(_idx)
+        if _idx[arg]:
+            _tmp_nodes[arg].prune_node()
+            for i in range(len(self.nodes) - 1, -1, -1):
+                if self.nodes[i].pruned:
+                    self.nodes.pop(i)
+            self.prune(alpha)
