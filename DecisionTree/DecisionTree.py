@@ -159,6 +159,9 @@ class Node:
         if self.class_result is None:
             self.class_result = self.get_class()
         _leafs_to_pop = [key for key in self.leafs.keys()]
+        for key in _leafs_to_pop:
+            self._data = self._data.append(self.leafs[key]._data)
+            self._labels = self._labels.append(self.leafs[key]._labels)
         _parent = self
         while _parent is not None:
             for key in _leafs_to_pop:
@@ -167,6 +170,17 @@ class Node:
             _parent = _parent.parent
         self.children = {}
         self.pruned = True
+
+    def entropy_if_pruned(self, eps=1e-12):
+        _leafs_to_pop = [key for key in self.leafs.keys()]
+        _data = self._data
+        _labels = self._labels
+        for key in _leafs_to_pop:
+            _labels = _labels.append(self.leafs[key]._labels)
+        _label_counter = Counter(_labels)
+        _labels_ent = [val for val in _label_counter.values()]
+        _len = len(_labels)
+        return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in _labels_ent])])
 
 
 # Tree: this class is used for controlling globally nodes, thus for tree pruning
@@ -192,10 +206,13 @@ class Tree:
     def prune(self, alpha=1):
         if self.depth <= 2:
             return
-        _tmp_nodes = np.array([node for node in self.nodes if not node.is_root and not node.class_result])
+        _tmp_nodes = sorted(np.array([node for node in self.nodes if not node.is_root and not node.class_result]),
+                            key=lambda node: - node.layers)
+        print([node.layers for node in _tmp_nodes])
         _old_loss = np.array([np.sum([leaf._utils.entropy() for leaf in node.leafs.values()]) * len(node.leafs)
                               + alpha * len(node.leafs) for node in _tmp_nodes])
-        _new_loss = [node.entropy + alpha for node in _tmp_nodes]
+        _new_loss = [node.entropy_if_pruned() + alpha for node in _tmp_nodes]
+        print(_old_loss, _new_loss)
         _idx = (_old_loss - _new_loss) > 0
         arg = np.argmax(_idx)
         if _idx[arg]:
