@@ -220,6 +220,7 @@ class Tree:
         _idx = (_old_loss - _new_loss) > 0
         arg = np.argmax(_idx)
         if _idx[arg]:
+            # print("Node to prune", _tmp_nodes[arg].key, "Entropy", _new_loss[arg], _old_loss[arg])
             _tmp_nodes[arg].prune_node()
             for i in range(len(self.nodes) - 1, -1, -1):
                 if self.nodes[i].pruned:
