@@ -34,14 +34,14 @@ class Neuron:
 
 
 class Network:
-    def __init__(self, data, labels, n_hidden_layers=0,
-                 n_neurons=[]):  # n_neurons are the number of neurons in the hidden layers
+    def __init__(self, data, labels, n_neurons=[]):  # n_neurons are the number of neurons in the hidden layers
         self._data = data
         self._labels = labels
         self._counters = Counter(labels)
         self._n_category = len(self._counters.values())  # Number of neurons in the last layer
         self._n_features = data.shape[1]  # Number of neurons in the first layer
         self._n_samples = data.shape[0]
+        n_hidden_layers = len(n_neurons)
         self.generate_network(n_hidden_layers, n_neurons)
 
     def generate_network(self, n_hidden_layers=0, n_neurons=[]):
@@ -123,12 +123,19 @@ class Network:
             self._weights_grad[l - 1] = self._deltas[l - 1][:, None] * np.array(
                 [neuron._activated_value for neuron in self._neurons[l - 1]])
 
-    def fit(self, step=0.01, iterations=1000):
+    def fit(self, step=0.001, iterations=10000):
         for i in range(iterations):
+            dw = 0
+            db = 0
             for n in range(self._n_samples):
                 self.feed_forward_one_sample(self._data.loc[n])
                 self.back_propagation_one_sample(self._data.loc[n], self._labels[n])
-                self._weights = (np.array(self._weights) - step * np.array(self._weights_grad))
-                self._intercepts = (np.array(self._intercepts) - step * np.array(self._intercepts_grad))
+                dw = dw + self._weights_grad
+                db = db + self._intercepts_grad
+
+            dw = dw / self._n_samples
+            db = db / self._n_samples
+            self._weights = np.array(self._weights) - step * dw
+            self._intercepts = np.array(self._intercepts) - step * db
 
 
