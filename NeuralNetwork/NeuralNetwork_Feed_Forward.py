@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import operator
 from collections import Counter
 
 
@@ -29,11 +30,12 @@ class Neuron:
 class Network:
     def __init__(self, data, labels, n_hidden_layers=0,
                  n_neurons=[]):  # n_neurons are the number of neurons in the hidden layers
-        self._data = data;
+        self._data = data
         self._labels = labels
         self._counters = Counter(labels)
         self._n_category = len(self._counters.values())  # Number of neurons in the last layer
         self._n_features = data.shape[1]  # Number of neurons in the first layer
+        self._n_samples = data.shape[0]
         self.generate_network(n_hidden_layers, n_neurons)
 
     def generate_network(self, n_hidden_layers=0, n_neurons=[]):
@@ -60,5 +62,29 @@ class Network:
             for i in range(self._shape[l + 1]):
                 self._neurons[l + 1][i].activate(inputs[i])
 
+    def output_one_sample(self, x):
+        self.feed_forward_one_sample(x)
+        return dict(zip(self._counters.keys(),
+                        np.array([neuron.output
+                                  for neuron in self._neurons[self._n_layers - 1]])))
+
+    def predict_one_sample(self, x):
+        output = self.output_one_sample(x)
+        return max(output.items(), key=operator.itemgetter(1))[0]
+
+    def loss_one_sample(self, x, y):  # Here for simplicity we first apply qudratic loss
+        # instead of entropy loss
+        predict = self.predict_one_sample(x)
+        return 0.5 * (predict - y) ** 2
+
+    def loss_train_data(self):
+        loss = 0
+        for i in range(self._n_samples):
+            loss += self.loss_one_sample(self._data.loc[i], self._labels[i])
+        return loss / self._n_samples
+
     def back_propagation_one_sample(self, x):
+        pass
+
+    def fit(self):
         pass
