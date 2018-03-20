@@ -60,9 +60,9 @@ class Network:
             if l == self._n_layers - 2:
                 for i in range(self._n_category):
                     self._neurons[l + 1][i]._category = list(self._counters.keys())[i]
-        self._weights_grad = self._weights
-        self._intercepts_grad = self._intercepts
-        self._deltas = self._intercepts
+        self._weights_grad = list(self._weights)
+        self._intercepts_grad = list(self._intercepts)
+        self._deltas = list(self._intercepts)
 
     def feed_forward_one_sample(self, x):
         for i in range(len(x)):
@@ -102,8 +102,20 @@ class Network:
         return loss / self._n_samples
 
     def back_propagation_one_sample(self, x, y):
-        for L in np.arange(self._n_layers - 1, 0, -1):
-            pass
+        L = self._n_layers - 1
+        for i in range(self._shape[L]):
+            neuron = self._neurons[L][i]
+            self._deltas[L - 1][i] = (neuron._activated_value - (y == neuron._category)) * neuron._activate_def(
+                neuron._in_value)
+        self._intercepts_grad[L - 1] = self._deltas[L - 1]
+        for l in np.arange(self._n_layers - 2, 0, -1):
+            self._deltas[l - 1] = np.multiply(self._weights[l].T.dot(self._deltas[l]),
+                                              np.array([neuron._activate_def(neuron._in_value) for neuron in
+                                                        self._neurons[l]]))
+            self._intercepts_grad[l - 1] = self._deltas[l - 1]
+            self._weights_grad[l - 1] = self._deltas[l - 1][:, None] * np.array(
+                [neuron._activated_value for neuron in self._neurons[l]])
 
     def fit(self, step=0.01, iterations=1000):
-        pass
+        for i in range(iterations):
+            pass
