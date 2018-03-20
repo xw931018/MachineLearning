@@ -111,10 +111,9 @@ class Network:
             neuron = self._neurons[L][i]
             self._deltas[L - 1][i] = (neuron._activated_value - (y == neuron._category)) * neuron._activate_def(
                 neuron._in_value)
-
         self._intercepts_grad[L - 1] = self._deltas[L - 1]
         self._weights_grad[L - 1] = self._deltas[L - 1][:, None] * np.array(
-            [neuron._activated_value for neuron in self._neurons[L]])
+            [neuron._activated_value for neuron in self._neurons[L - 1]])
 
         for l in np.arange(self._n_layers - 2, 0, -1):
             self._deltas[l - 1] = np.multiply(self._weights[l].T.dot(self._deltas[l]),
@@ -122,7 +121,7 @@ class Network:
                                                         self._neurons[l]]))
             self._intercepts_grad[l - 1] = self._deltas[l - 1]
             self._weights_grad[l - 1] = self._deltas[l - 1][:, None] * np.array(
-                [neuron._activated_value for neuron in self._neurons[l]])
+                [neuron._activated_value for neuron in self._neurons[l - 1]])
 
     def fit(self, step=0.01, iterations=1000):
         for i in range(iterations):
