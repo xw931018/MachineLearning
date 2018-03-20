@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import operator
+import copy
 from collections import Counter
 
 
@@ -60,9 +61,12 @@ class Network:
             if l == self._n_layers - 2:
                 for i in range(self._n_category):
                     self._neurons[l + 1][i]._category = list(self._counters.keys())[i]
-        self._weights_grad = list(self._weights)
-        self._intercepts_grad = list(self._intercepts)
-        self._deltas = list(self._intercepts)
+        self._weights = np.array(self._weights)
+        self._intercepts = np.array(self._intercepts)
+
+        self._weights_grad = copy.deepcopy(self._weights)
+        self._intercepts_grad = copy.deepcopy(self._intercepts)
+        self._deltas = copy.deepcopy(self._intercepts_grad)
 
     def feed_forward_one_sample(self, x):
         for i in range(len(x)):
@@ -107,7 +111,11 @@ class Network:
             neuron = self._neurons[L][i]
             self._deltas[L - 1][i] = (neuron._activated_value - (y == neuron._category)) * neuron._activate_def(
                 neuron._in_value)
+
         self._intercepts_grad[L - 1] = self._deltas[L - 1]
+        self._weights_grad[L - 1] = self._deltas[L - 1][:, None] * np.array(
+            [neuron._activated_value for neuron in self._neurons[L]])
+
         for l in np.arange(self._n_layers - 2, 0, -1):
             self._deltas[l - 1] = np.multiply(self._weights[l].T.dot(self._deltas[l]),
                                               np.array([neuron._activate_def(neuron._in_value) for neuron in
@@ -118,4 +126,10 @@ class Network:
 
     def fit(self, step=0.01, iterations=1000):
         for i in range(iterations):
-            pass
+            for n in range(self._n_samples):
+                self.feed_forward_one_sample(self._data.loc[n])
+                self.back_propagation_one_sample(self._data.loc[n], self._labels[n])
+                self._weights = (np.array(self._weights) - step * np.array(self._weights_grad))
+                self._intercepts = (np.array(self._intercepts) - step * np.array(self._intercepts_grad))
+
+
