@@ -4,10 +4,16 @@ import operator
 import copy
 from collections import Counter
 
+relu = lambda x: max([x, 0])
+relu_def = lambda x: 1 * (x > 0)
+
+logistic = lambda x: np.exp(x) / (1 + np.exp(x))
+logistic_def = lambda x: np.exp(x) / (2 * np.exp(x) + np.exp(2 * x) + 1)
+
 
 class Neuron:
-    def __init__(self, activate=lambda x: 1 / (1 + np.exp(-x)), intercept=0,
-                 activate_def=lambda x: 1 / (2 + np.exp(x) + np.exp(-x)), output_layer=False,
+    def __init__(self, activate=logistic, intercept=0,
+                 activate_def=logistic_def, output_layer=False,
                  n_previous=None, layer=None, position=None, invalue=None):
         self._layer = layer
         self._position = position
@@ -34,7 +40,11 @@ class Neuron:
 
 
 class Network:
-    def __init__(self, data, labels, n_neurons=[]):  # n_neurons are the number of neurons in the hidden layers
+    def __init__(self, data, labels, n_neurons=[],
+                 activate=logistic,
+                 activate_def=logistic_def):  # n_neurons are the number of neurons in the hidden layers
+        self._activate = activate
+        self._activate_def = activate_def
         self._data = data
         self._labels = labels
         self._counters = Counter(labels)
@@ -56,6 +66,8 @@ class Network:
             self._intercepts.append(np.random.normal(size=self._shape[l + 1]))
             self._weights.append(np.random.normal(size=(self._shape[l + 1], self._shape[l])))
             self._neurons.append(np.array([Neuron(intercept=self._intercepts[l][i],
+                                                  activate=self._activate,
+                                                  activate_def=self._activate_def,
                                                   output_layer=l == self._n_layers - 2)
                                            for i in range(len(self._intercepts[l]))]))
             if l == self._n_layers - 2:
@@ -123,7 +135,7 @@ class Network:
             self._weights_grad[l - 1] = self._deltas[l - 1][:, None] * np.array(
                 [neuron._activated_value for neuron in self._neurons[l - 1]])
 
-    def fit(self, step=0.001, iterations=10000):
+    def fit(self, step=0.001, iterations=2000):
         for i in range(iterations):
             dw = 0
             db = 0
@@ -137,5 +149,4 @@ class Network:
             db = db / self._n_samples
             self._weights = np.array(self._weights) - step * dw
             self._intercepts = np.array(self._intercepts) - step * db
-
 
