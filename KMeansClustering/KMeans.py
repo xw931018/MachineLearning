@@ -54,7 +54,7 @@ class KMeansPlus:
         argmin = np.argmin(distances)
         return k == argmin
 
-    def fit(self, data, iterations=2000, K=None, initial_method="kmeans++"):
+    def fit(self, data, iterations=200, K=None, initial_method="kmeans++"):
         if K is None:
             K = self._K
         self._data = data
@@ -72,4 +72,15 @@ class KMeansPlus:
                         indexes_to_delete.append(index)
                 tmp = np.delete(tmp, index, axis=0)
             centroids = np.array([np.mean(np.array(cluster), axis=0) for cluster in centroids_candidates])
-        return centroids, centroids_candidates
+        self._centroids = centroids
+        classified = []
+        for x in data:
+            classified.append(self.predict_one_sample(x))
+        self._classified = classified
+        return centroids, classified
+
+    def predict_one_sample(self, x):
+        return np.argmin(np.linalg.norm(x - self._centroids, axis=1))
+
+    def predict(self, data):
+        return [self.predict_one_sample(sample) for sample in data]
