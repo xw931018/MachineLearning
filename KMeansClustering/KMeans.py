@@ -1,4 +1,6 @@
 import numpy as np
+import seaborn as sns;
+sns.set()
 import copy
 
 initialization_methods = ["random", "furthest", "kmeans++"]
@@ -47,7 +49,7 @@ class KMeansPlus:
         # than to other centroids
         distances = np.linalg.norm(sample - centroids, axis=1)
         argmin = np.argmin(distances)
-        return k == argmin
+        return distances[k] <= distances[argmin]
 
     def fit(self, data, iterations=200, K=None, initial_method="kmeans++"):
         if K is None:
@@ -57,7 +59,7 @@ class KMeansPlus:
         self._n_features = data.shape[1]
         centroids = self.initialize_center(data, method=initial_method, K=K)
         for iter in range(iterations):
-            centroids_candidates = [[] for i in range(K)]
+            centroids_candidates = [[centroids[i]] for i in range(K)]
             tmp = copy.deepcopy(data)
             for i in range(K):
                 indexes_to_delete = []
@@ -66,7 +68,9 @@ class KMeansPlus:
                         centroids_candidates[i].append(x)
                         indexes_to_delete.append(index)
                 tmp = np.delete(tmp, index, axis=0)
-            centroids = np.array([np.mean(np.array(cluster), axis=0) for cluster in centroids_candidates])
+            centroids = ([np.mean(np.array(cluster), axis=0)
+                          for cluster in centroids_candidates])
+            centroids = np.array(centroids)
         self._centroids = centroids
         classified = []
         for x in data:
