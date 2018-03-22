@@ -1,7 +1,9 @@
 import numpy as np
 import seaborn as sns;
+
 sns.set()
 import copy
+from matplotlib import pyplot as plt
 
 initialization_methods = ["random", "furthest", "kmeans++"]
 
@@ -83,3 +85,11 @@ class KMeansPlus:
 
     def predict(self, data):
         return [self.predict_one_sample(sample) for sample in data]
+
+    def plot_samples(self):
+        X = self._data
+        colors = self.predict(X)
+        centroids = self._centroids
+        plt.scatter(X[:, 0], X[:, 1], c=colors, s=50)
+        plt.scatter(centroids[:, 0], centroids[:, 1], s=100)
+        plt.show()
