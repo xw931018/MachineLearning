@@ -34,7 +34,7 @@ class Utils:
     def feature_entropy(self, idx, eps=1e-12):
         _feat_values = self._data[idx]
         _len = len(_feat_values)
-        _feat_labels = Counter(_feat_values).values()
+        _feat_labels = collections.Counter(_feat_values).values()
         return max([eps, - np.sum([p / _len * math.log(p / _len, self._base) for p in _feat_labels])])
 
     def info_gain_rate(self, idx):
@@ -124,7 +124,7 @@ class Node:
         self._generate_children(_max_feature)
 
     def get_class(self):  # if the node is leaf, then return the classification result of this node
-        _counter = collections.Counter(self._labels)
+        _counter = Counter(self._labels)
         return max(_counter.keys(), key=lambda key: _counter[key])
 
     def view(self, indent=4):
@@ -144,7 +144,7 @@ class Node:
             return self.class_result
         else:
             try:
-                return self.children[x[self._split_feature][0]].predict_one_sample(x)
+                return self.children[x[self._split_feature]].predict_one_sample(x)
             except KeyError:
                 return self.get_class()
 
@@ -153,7 +153,7 @@ class Node:
             if self.is_root:
                 return [self.class_result] * len(data)
             return self.class_result
-        return [self.predict_one_sample(data.loc[i:i]) for i in range(len(data))]
+        return [self.predict_one_sample(data.loc[i]) for i in range(len(data))]
 
     def prune_node(self):  # Prune this node: 1. give a category for this node; 2. delete all leafs of this node\
         # 3. empty the children of this node
