@@ -124,7 +124,7 @@ class Node:
         self._generate_children(_max_feature)
 
     def get_class(self):  # if the node is leaf, then return the classification result of this node
-        _counter = Counter(self._labels)
+        _counter = collections.Counter(self._labels)
         return max(_counter.keys(), key=lambda key: _counter[key])
 
     def view(self, indent=4):
