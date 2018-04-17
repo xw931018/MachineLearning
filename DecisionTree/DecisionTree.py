@@ -182,7 +182,7 @@ class Node:
         for key in _leafs_to_pop:
             if not key == self.key:
                 _labels = _labels.append(self.leafs[key]._labels)
-        _label_counter = Counter(_labels)
+        _label_counter = collections.Counter(_labels)
         _labels_ent = [val for val in _label_counter.values()]
         _len = len(_labels)
         return max([eps, - np.sum([p * math.log(p / _len, self._base) for p in _labels_ent])])
