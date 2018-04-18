@@ -101,6 +101,11 @@ class Network:
         output = self.output_one_sample(x)
         return max(output.items(), key=operator.itemgetter(1))[0]
 
+    def predict(self, data):
+        if isinstance(data, pd.DataFrame):
+            return [self.predict_one_sample(data.loc[i]) for i in range(len(data))]
+        return [self.predict_one_sample(x) for x in data]
+
     def loss_one_sample(self, x, y):  # Here for simplicity we first apply qudratic loss
         # instead of entropy loss
         output = self.output_one_sample(x)
