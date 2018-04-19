@@ -62,7 +62,7 @@ class EM_Gaussian:
         return label
 
     def predict(self, data):
-        return [self.predict_one_sample(point) for point in data]
+        return np.array([self.predict_one_sample(point) for point in data])
 
     def plot_center(self):
         centers = np.array(self._mu)
