@@ -55,6 +55,15 @@ class EM_Gaussian:
         self._sigma = sigma
         return p, mu, sigma
 
+    def predict_one_sample(self, x):
+        """Calculate the normalized distances from the point x to cluster centers and choose the closest"""
+        distances = np.linalg.norm(x - self._mu, axis=1) / np.sqrt(np.linalg.det(self._sigma))
+        label = np.argmin(distances)
+        return label
+
+    def predict(self, data):
+        return [self.predict_one_sample(point) for point in data]
+
     def plot_center(self):
         centers = np.array(self._mu)
         plt.scatter(self._data[:, 0], self._data[:, 1])
