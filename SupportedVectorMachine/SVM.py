@@ -155,17 +155,25 @@ class SVM_Linear:
         self.b = b
         return (w, b)
 
-    def predict(self, x):
+    def predict_one_sample(self, x):
         if not self.use_kernel:
-            return x.dot(self.w.flatten()) + self.b
+            result_array = x.dot(self.w.flatten()) + self.b
+            return result_array[0]
         DD = np.diag([self.kernel(self.__X[i, :], x) for i in np.arange(self.__X.shape[0])])
-        yy = y * alphas
-        return sum(DD.dot(yy.T)) + self.b
+        yy = self.__y * self.alphas
+        result_array = sum(DD.dot(yy.T)) + self.b
+        return result_array[0]
+
+    def predict(self, data):
+        return np.array([self.predict_one_sample(x) for x in data])
+
+    def classify_one_sample(self, x):
+        if not self.use_kernel:
+            return np.sign(self.predict_one_sample(x))
+        return np.sign(self.predict_one_sample(x))
 
     def classify(self, x):
-        if not self.use_kernel:
-            return np.sign(self.predict(x))
-        return np.sign(self.predict(x))
+        return np.array([self.classify_one_sample(x) for x in data])
 
     def plot_2d(self, X=None, y=None):
         if X is None:
