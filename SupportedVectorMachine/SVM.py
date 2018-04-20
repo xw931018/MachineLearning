@@ -51,6 +51,8 @@ import sys
 
 from cvxopt import solvers, matrix
 
+def RBF(x, y):
+    return np.exp(-2*(x - y).dot(x-y))
 
 class SVM_Linear:
     # A linear SVM class that builds a classification model using linear SVM

@@ -22,4 +22,6 @@ class SVMTestCase(unittest.TestCase):
         X_train, X_test, y_train, y_test = self.generate_blobs_sample()
         svm = SVM.SVM_Linear(X_train, y_train)
         svm.fit()
+        test_pred = svm.classify(X_test)
+        self.assertEquals(test_pred, y_test)
 
