@@ -172,7 +172,7 @@ class SVM_Linear:
             return np.sign(self.predict_one_sample(x))
         return np.sign(self.predict_one_sample(x))
 
-    def classify(self, x):
+    def classify(self, data):
         return np.array([self.classify_one_sample(x) for x in data])
 
     def plot_2d(self, X=None, y=None):
