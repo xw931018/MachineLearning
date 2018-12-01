@@ -6,4 +6,4 @@ which are currenty available. In March 2018, I will implement also unsupervised 
 
 ----------Updated 01/12/2018----------------
 
-Still not completed......
+The Neural Network and EM were added in March/April 2018. Now it's time to practice something more interesting: reinforcement learning and NLP
