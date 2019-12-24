@@ -38,7 +38,7 @@ class FFNNTestCase(unittest.TestCase):
         X, y_true = make_blobs(n_samples=300, centers=2)
         datasets = pd.DataFrame(X, columns=["X1", "X2"])
         datasets['y'] = y_true
-        X_train, X_test, y_train, y_test = train_test_split(datasets.drop('y', axis=1),                                                 y_true, train_size=0.8)
+        X_train, X_test, y_train, y_test = train_test_split(datasets.drop('y', axis=1), y_true, train_size=0.8)
         X_train = X_train.reset_index().drop("index", axis=1)
         X_test = X_test.reset_index().drop("index", axis=1)
         net1 = FFNN.Network(data=X_train, labels=y_train, n_neurons=[10, 10])

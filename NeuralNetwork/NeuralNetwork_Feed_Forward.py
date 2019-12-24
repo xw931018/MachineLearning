@@ -40,7 +40,7 @@ class Neuron:
 
 
 class Network:
-    def __init__(self, data, labels, n_neurons=[],
+    def __init__(self, data, labels, n_neurons=(),
                  activate=logistic,
                  activate_def=logistic_def):  # n_neurons are the number of neurons in the hidden layers
         self._activate = activate
@@ -54,8 +54,9 @@ class Network:
         n_hidden_layers = len(n_neurons)
         self.generate_network(n_hidden_layers, n_neurons)
 
-    def generate_network(self, n_hidden_layers=0, n_neurons=[]):
+    def generate_network(self, n_hidden_layers=0, n_neurons=()):
         self._n_layers = 2 + n_hidden_layers
+        n_neurons = list(n_neurons)
         self._shape = [self._n_features] + n_neurons + [self._n_category]
         self._weights = []
         self._intercepts = []  # initiate the weights and intercepts
@@ -73,7 +74,9 @@ class Network:
             if l == self._n_layers - 2:
                 for i in range(self._n_category):
                     self._neurons[l + 1][i]._category = list(self._counters.keys())[i]
-        self._weights = np.array(self._weights)
+                    self._neurons[l + 1][i]._activate = lambda x : x # Activation of output layer is linear
+                    self._neurons[l + 1][i]._activate = lambda x : 1 # Activation of output layer is linear
+        self._weights = np.array(self._weights)     # ERROR: having a numpy array error at N_NEURON = [10, 10], to resolve this!
         self._intercepts = np.array(self._intercepts)
 
         self._weights_grad = copy.deepcopy(self._weights)
@@ -103,7 +106,7 @@ class Network:
 
     def predict(self, data):
         if isinstance(data, pd.DataFrame):
-            return [self.predict_one_sample(data.loc[i]) for i in range(len(data))]
+            return [self.predict_one_sample(data.iloc[i]) for i in range(len(data))]
         return [self.predict_one_sample(x) for x in data]
 
     def loss_one_sample(self, x, y):  # Here for simplicity we first apply qudratic loss
@@ -119,7 +122,7 @@ class Network:
     def loss_train_data(self):
         loss = 0
         for i in range(self._n_samples):
-            loss += self.loss_one_sample(self._data.loc[i], self._labels[i])
+            loss += self.loss_one_sample(self._data.iloc[i], self._labels[i])
         return loss / self._n_samples
 
     def back_propagation_one_sample(self, x, y):
@@ -145,8 +148,8 @@ class Network:
             dw = 0
             db = 0
             for n in range(self._n_samples):
-                self.feed_forward_one_sample(self._data.loc[n])
-                self.back_propagation_one_sample(self._data.loc[n], self._labels[n])
+                self.feed_forward_one_sample(self._data.iloc[n])
+                self.back_propagation_one_sample(self._data.iloc[n], self._labels[n])
                 dw = dw + self._weights_grad
                 db = db + self._intercepts_grad
 
@@ -155,3 +158,10 @@ class Network:
             self._weights = np.array(self._weights) - step * dw
             self._intercepts = np.array(self._intercepts) - step * db
 
+
+# from sklearn.datasets import load_digits
+# digits = load_digits()
+# X, y = pd.DataFrame(digits['data']), digits['target']
+# nn = Network(X, y, [10, 5, ]) # ReLU Activation has seen all neurons were de
+# nn.fit(step = 1, iterations = 2000) # Need to choose a 'good' learning rate for convergence step = 1 is a good choice
+#
