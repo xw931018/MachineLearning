@@ -1,5 +1,5 @@
 import unittest
-from SupportedVectorMachine import SVM
+from SupportedVectorMachine import svm
 from sklearn.datasets.samples_generator import  make_blobs, make_moons
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -21,7 +21,7 @@ class SVMTestCase(unittest.TestCase):
 
     def test_basic_blobs(self):
         X_train, X_test, y_train, y_test = self.generate_blobs_sample()
-        svm = SVM.SVM_Linear(X_train, y_train)
+        svm = svm.SVM_Linear(X_train, y_train)
         svm.fit()
         test_pred = svm.classify(X_test)
         acc_train = accuracy_score(y_train, svm.classify(X_train))
@@ -33,7 +33,7 @@ class SVMTestCase(unittest.TestCase):
 
     def test_basic_moons(self):
         X_train, X_test, y_train, y_test = self.generate_moons_sample()
-        svm = SVM.SVM_Linear(X_train, y_train, kernel = SVM.RBF)
+        svm = svm.SVM_Linear(X_train, y_train, kernel = svm.RBF)
         svm.fit()
         test_pred = svm.classify(X_test)
         acc_train = accuracy_score(y_train, svm.classify(X_train))

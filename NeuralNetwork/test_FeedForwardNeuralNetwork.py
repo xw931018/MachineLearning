@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from NeuralNetwork import NeuralNetwork_Feed_Forward as FFNN
+from NeuralNetwork import FeedForwardNeuralNetwork as FFNN
 from sklearn.metrics import precision_score, accuracy_score, recall_score
 from sklearn.datasets.samples_generator import  make_blobs
 from sklearn.model_selection import train_test_split
