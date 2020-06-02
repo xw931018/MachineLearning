@@ -13,7 +13,7 @@ logistic_def = lambda x: np.exp(x) / (2 * np.exp(x) + np.exp(2 * x) + 1)
 
 class Neuron:
     def __init__(self, activate=logistic, intercept=0,
-                 activate_def=logistic_def, output_layer=False,
+                 activate_def=logistic_def, output_layer=False, 
                  n_previous=None, layer=None, position=None, invalue=None):
         self._layer = layer
         self._position = position
@@ -75,7 +75,7 @@ class Network:
                 for i in range(self._n_category):
                     self._neurons[l + 1][i]._category = list(self._counters.keys())[i]
                     self._neurons[l + 1][i]._activate = lambda x : x # Activation of output layer is linear
-                    self._neurons[l + 1][i]._activate = lambda x : 1 # Activation of output layer is linear
+                    self._neurons[l + 1][i]._activate_def = lambda x : 1 # Activation of output layer is linear
         self._weights = np.array(self._weights)     # ERROR: having a numpy array error at N_NEURON = [10, 10], to resolve this!
         self._intercepts = np.array(self._intercepts)
 
@@ -109,7 +109,7 @@ class Network:
             return [self.predict_one_sample(data.iloc[i]) for i in range(len(data))]
         return [self.predict_one_sample(x) for x in data]
 
-    def loss_one_sample(self, x, y):  # Here for simplicity we first apply qudratic loss
+    def loss_one_sample(self, x, y):  # Here for simplicity we first apply quadratic loss
         # instead of entropy loss
         output = self.output_one_sample(x)
         expected = dict(zip(self._counters.keys(), np.zeros(self._n_category)))
@@ -129,8 +129,11 @@ class Network:
         L = self._n_layers - 1
         for i in range(self._shape[L]):
             neuron = self._neurons[L][i]
-            self._deltas[L - 1][i] = (neuron._activated_value - (y == neuron._category)) * neuron._activate_def(
-                neuron._in_value)
+            # self._deltas[L - 1][i] = (neuron._activated_value - (y == neuron._category)) * neuron._activate_def(
+            #     neuron._in_value) # MSE loss function
+
+            self._deltas[L - 1][i] =  (neuron._activated_value - (y == neuron._category))
+
         self._intercepts_grad[L - 1] = self._deltas[L - 1]
         self._weights_grad[L - 1] = self._deltas[L - 1][:, None] * np.array(
             [neuron._activated_value for neuron in self._neurons[L - 1]])
@@ -159,9 +162,19 @@ class Network:
             self._intercepts = np.array(self._intercepts) - step * db
 
 
+# import pandas as pd
 # from sklearn.datasets import load_digits
+# from sklearn.model_selection import train_test_split
+# from sklearn.metrics import confusion_matrix
+#
 # digits = load_digits()
 # X, y = pd.DataFrame(digits['data']), digits['target']
-# nn = Network(X, y, [10, 5, ]) # ReLU Activation has seen all neurons were de
+# X = X/16
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3)
+#
+# X_1 = X[pd.Index(y).isin([3, 5])]
+# y_1 = y[pd.Index(y).isin([3, 5])]
+#
+# nn = Network(X_1, y_1, [3, 2, ]) # ReLU Activation has seen all neurons were de
 # nn.fit(step = 1, iterations = 2000) # Need to choose a 'good' learning rate for convergence step = 1 is a good choice
 #
