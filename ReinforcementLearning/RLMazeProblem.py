@@ -116,7 +116,7 @@ class MazeAgent:
                 actionToChoose = ACTIONS[np.argmax(candidateRewards)]
                 self._policy[row, col] = actionToChoose
 
-    def policyIterationFromValue(self, episodes=100, evaluationIters=50, printMaze=False):
+    def runPolicyIterationFromValue(self, episodes=100, evaluationIters=50, printMaze=False):
         '''Main function for policy iteration based on value function'''
         for it in range(episodes):
             self._policyEvaluation(iterations=evaluationIters)
@@ -250,14 +250,26 @@ def main():
                      [1., 1., 1., 1., 1., 1., 1., -np.infty, 1., 10]
                      ])
 
+    maze2 = np.array([[-1., -np.infty, -1., -1., -1., -1., -1., -1., -1., -1.],
+                      [-1., -1., -1., -1., -1., -np.infty, -1., -1., -1., -1.],
+                      [-1., -1., -1., -1., -1., -np.infty, -1., -1., -1., -1.],
+                      [-np.infty, -np.infty, -1., -np.infty, -np.infty, -1., -np.infty, -1., -1., -1.],
+                      [-1., -1., -np.infty, -1., -np.infty, -1., -np.infty, -np.infty, -np.infty, -1.],
+                      [-1., -1., -np.infty, -1., -np.infty, -1., -1., -1., -1., -1.],
+                      [-1., -1., -1., -1., -1., -1., -1., -1., -1., -1.],
+                      [-1., -1., -1., -1., -1., -1., -np.infty, -np.infty, -np.infty, -np.infty],
+                      [-1., -np.infty, -np.infty, -np.infty, -np.infty, -np.infty, -1., -1., -1., -1.],
+                      [-1., -1., -1., -1., -1., -1., -1., -np.infty, -1., 10]
+                      ])
+
+    maze3 = np.array([[-1, -1, -1, -1, -1],
+                      [-1, -100, -1, -100, -1],
+                      [-1, -1, -1, -1, -1],
+                      [-1, -100, -1, -100, -1],
+                      [-1, -1, 100, -1, -1]])
+
     agent0 = MazeAgent(maze0)
 
     agent0._initialize()
-    pol0, actValue0 = agent0.run(iterations = 500, mcPaths = 1)
+    agent0.runPolicyIterationFromValue()
     agent0.visualize()
-
-    agent1 = MazeAgent(maze1)
-
-    agent1._initialize()
-    pol1, actValue1 = agent1.run(iterations = 500, mcPaths = 1)
-    agent1.visualize()
