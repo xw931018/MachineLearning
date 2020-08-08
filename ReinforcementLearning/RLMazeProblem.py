@@ -14,7 +14,7 @@ def moveOneStep(current, action, shape):  # Equivalent to a transition matrix
     if action == '↑':  # 'Up':
         current[0] = max(current[0] - 1, 0)
     if action == '↓':  # 'Down':
-        current[0] = min(current[0] + 1, shape[1] - 1)
+        current[0] = min(current[0] + 1, shape[0] - 1)
     if action == '←':  # 'Left':
         current[1] = max(current[1] - 1, 0)
     if action == '→':  # 'Right':
@@ -180,7 +180,7 @@ class MazeAgent:
     def runOffPolicyLearning(self, episodes=100, alpha=0.25, epsilon=0.95, epsilonNextActSARSA=0.95,
                              method='qLearning'):
         #         self.actionValue = np.random.uniform(size = (self._shape[0], self._shape[1], len(ACTIONS)))
-        self.actionValue[self._end[0], self._end[1], :] = self._maze[self._end]
+        self.actionValue[self._end[0], self._end[1], :] = self._maze[self._end[0], self._end[1]]
         for ep in range(episodes):
             self._offPolicyOneEpisode(alpha, epsilon=epsilon, epsilonNextActSARSA=epsilonNextActSARSA,
                                       method=method)
